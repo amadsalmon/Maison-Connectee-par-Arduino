@@ -3,22 +3,25 @@
 // CE PROGRAMME EST UN ESSAI VISANT À EXÉCUTER PLUSIEURS COMMANDES EN MÊME TEMPS ET EN BOUCLE.
 // En fonction de l'état du système (déverouillé, en attente d'identification, intrus détecté), différents mécanismes vont s'enclencher.
 //
+
 #include<Keypad.h> // LIBRAIRIE DE L'INTERFACE KEYPAD
 #include<LiquidCrystal.h> // LIBRAIRIE DU LCD
 #include<Servo.h>// LIBRARIE DU SERVOMOTEUR
-//#include<String.h>
+
 
 // DÉFINITION DU LCD
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 // DÉFINITION DES INDICATEURS
-int buzzer =13; // BUZZER (SIRÈNE D'ALARME)
-int ledRouge = 9; // LED ROUGE
-int ledVerte = 8; // LED VERTE
+const int buzzer =13; // BUZZER (SIRÈNE D'ALARME)
+const int ledRouge= 12; // Pin de la led rouge de la LED RGB
+const int ledVerte = 11; // Pin de la led verte de la LED RGB
+ const int ledBleue = 22; // Pin de la led bleue de la LED RGB
 
 
-Servo servo_Motor; 
+Servo loquet; 
+int angle; // Utile lors du controle de l'orientation du loquet.
 
 //----------------------- DÉFINITION DU KEYPAD -----------------------
 
@@ -43,27 +46,24 @@ Keypad leKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 void setup()
 {
   Serial.begin(9600);
-   pinMode(ledRouge,OUTPUT);
-   pinMode(ledVerte,OUTPUT);
-   pinMode(buzzer, OUTPUT);
-   
+
+  pinMode(buzzer, OUTPUT);
+  pinMode(ledRouge, OUTPUT);
+  pinMode(ledVerte, OUTPUT);
+  pinMode(ledBleue, OUTPUT);
+  
+  loquet.attach(10);
+
   lcd.begin(16,2);
   lcd.print("SERRURE CONNECTÉE");
-  lcd.setCursor(0,2);
-  lcd.print("       PAR:");
   delay(2000);
   lcd.clear();
-  lcd.print("    AMAD");
-  lcd.setCursor(0,2);
-  lcd.print("     SALMON");
-  delay(2000);
-  lcd.clear();
-  servo_Motor.attach(3);
   verrouiller(true);
+  etatLed('o');
   delay(1000);
 }
 
-//-----------------------  -----------------------
+//----------------------- DÉFINITION DE VARIABLES UTILITAIRES -----------------------
 
 String password = "1234";  // MOT DE PASSE
 int position = 0; // VARIABLE POUR DÉTERMINER LA POSITION.
@@ -72,33 +72,39 @@ int longueurPassword = 4;
 int mauvais = 0; // VARIABLE FOR CALCULATING THE mauvais INPUT.
 int tentatives = 0; // VARIABLE POUR COMPTER LE NOMBRE DE TENTATIVES
 
-int dureeAlarme = 0;
-int dureeDeverouillage = 0;
+long dureeAlarme = 0;
+long dureeDeverouillage = 0;
 
+//----------------------- DÉFINITION DES VARIABLES D'ÉTAT -----------------------
+// Le système a 3 états : serrureDeverouillee, attenteIdentification, et intrusion.
+// En fonction de l'état du système, différents mécanismes s'enclencheront.
+// Par défaut, le système est en état attenteIdentification.
 bool intrusion = false;
-bool toutEstOK = false;
+bool serrureDeverouillee = false;
 bool attenteIdentification=true;
 
-// En fonction de l'état du système (déverouillé, en attente d'identification, intrus détecté), différents mécanismes vont s'enclencher.
+
 void loop() {
-  //--------------------------- TOUT EST OK ----------------------------------
-  if(toutEstOK){
-    Serial.println("TOUT EST OK. LA PORTE EST OUVERTE.");
+  //--------------------------- SERRURE DÉVERROUILLÉE ----------------------------------
+  if(serrureDeverouillee){
+    Serial.println("Permission. LA PORTE EST OUVERTE.");
     dureeDeverouillage++;
-    if(dureeDeverouillage>20){
+    if(dureeDeverouillage>20) // On garde la serrure déverouillée le temps de 20 tours de loop.
+    {
       dureeDeverouillage=0;
-      bool toutEstOK = false;
-      bool attenteIdentification=true;
-      verrouiller(true);
+      bool serrureDeverouillee = false;
+      bool attenteIdentification=true; 
+      verrouiller(true); 
     }
   }
+
   //--------------------------- EN ATTENTE D'IDENTIFICATION ----------------------------------
   else if(attenteIdentification){
 
     Serial.println("ATTENTE d'IDENTIFICATION");
     
-    char key=leKeypad.getKey();// ON PREND L'ENTRÉE DU KEYPAD
-    String entree[4];
+    char key=leKeypad.getKey();  // On récupère l'entrée de chaque key tapée au keypad
+    String entree[longueurPassword];  // On stocke l'entrée dans une variable tableau de même taille que le password
   
    if(key) // SI UNE KEY EST PRESSÉE
    {
@@ -107,7 +113,7 @@ void loop() {
     lcd.setCursor(position,2);
     lcd.print(key);
     delay(500);
-      if(key == '*' || key == '#')
+      if(key == '*' || key == '#') // Pour verrouiller manuellement le système
         {
             Serial.println("VERROUILLAGE PAR *# ");
             position = 0;
@@ -115,37 +121,38 @@ void loop() {
             lcd.clear();
         }
   
-      else if(key == password[position])
+      else if(key == password[position]) // En cas d'entrée correcte
         {
             entree[position]=key;
             position++;
         }
    
-      else if (key != password[position] )
-        {// SI mauvais INPUT INCREMENT  mauvais et POSITION.
+      else if (key != password[position] ) // En cas d'entrée incorrecte
+        {
             mauvais++;
             position ++;
         }
-        if(tentatives ==3)  // SI 3 MAUVAISES TENTATIVES
-              {
-                  tentatives=0;
-                  attenteIdentification=false;
-                  intrusion = true; /////////////////////////// IMPORTANT
-                  Serial.println("3 MAUVAISES TENTATIVES");
-              }
   
       if(position == longueurPassword){
-            if( mauvais >0 && tentatives <3) // SI IL Y A UNE MAUVAISE ENTREE 
+            if( mauvais >0 && tentatives <3) // EN CAS DE MAUVAIS PASSWORD TAPÉ
               {
                   tentatives++;
                   mauvais = 0;
                   position = 0;
+                  etatLed('o');
                   lcd.clear();
-                  lcd.print("mauvais");
+                  lcd.print("Mauvais");
                   lcd.setCursor(5,2);
-                  lcd.print("MOT DE PASSE");
+                  lcd.print("mot de passe. Reessayez.");
                   Serial.println("Mauvais mot de passe. Réessayez.");
-                  delay(1000);        
+                  delay(500);        
+              }
+        if(tentatives == 3)  // SI 3 MAUVAISES TENTATIVES
+              {
+                  tentatives=0; // on réinitialise le nombre de tentatives à 0 
+                  attenteIdentification=false;
+                  intrusion = true; // On active le mode "INTRUSION"
+                  Serial.println("3 MAUVAISES TENTATIVES");
               }
   
             else if(position == longueurPassword && mauvais == 0){ 
@@ -165,73 +172,113 @@ void loop() {
                   verrouiller(false);
 
                   attenteIdentification = false;
-                  toutEstOK = true;
+                  serrureDeverouillee = true;
                   
               }
           }
         }
       }
     
-    //--------------------------- INTRUSION ----------------------------------
+  //--------------------------- INTRUSION ----------------------------------
   else if(intrusion){
     Serial.println("MODE INTRUSION");
-    INTRUS(true);
+    INTRUS();
     dureeAlarme += 1;
-    if(dureeAlarme>=15){
+    if(dureeAlarme>15) // L'alarme intrusion dure 15 loops
+    {
       dureeAlarme=0;
       intrusion=false;
       attenteIdentification=true;
-      }
+    }
 }
 }
 
-void verrouiller(bool verrouillee)// FONCTION POUR VERROUILLER LA SERRURE
+///--------------------------- FONCTION POUR VERROUILLER LA SERRURE --------------------------- 
+void verrouiller(bool verrouillee)
   {
     if (verrouillee){
       Serial.println("SYSTÈME EN COURS DE VERROUILLAGE");
-          digitalWrite(ledRouge, HIGH);
-          digitalWrite(ledVerte, LOW);
+          etatLed('j');
+          angle = loquet.read();
           delay(1000);
-          servo_Motor.attach(3);
-          servo_Motor.write(10);
+          if ( angle ==0){
+            Serial.println("LE SYSTEM EST DEJA VEROUILLE");}
+          loquet.write(0);
           delay(1000);
-          servo_Motor.detach();
+          etatLed('o');
           Serial.println("SYSTÈME VERROUILLÉ");
       }
       
     else{
           Serial.println("SYSTÈME EN COURS DE DÉVERROUILLAGE");
-          digitalWrite(ledRouge, LOW);
-          digitalWrite(ledVerte, HIGH);
+          etatLed('b');
           delay(1000);
-          servo_Motor.attach(3);
-          servo_Motor.write(90);
+          loquet.write(90);
           delay(1000);
-          servo_Motor.detach();
+          etatLed('v');
           Serial.println("SYSTÈME DÉVERROUILLÉ");
       }
   }
 
+
+///--------------------------- FONCTIONS INDICATRICES --------------------------- 
+
+// Fonction qui fait imiter au buzzer le son d'une sirène d'alarme grace à des fréquences particulières
 void sirene(){
   tone(buzzer, 2300); 
   delay(200);        
   tone(buzzer, 1700);
-  //noTone(buzzer);    
   delay(200);       
-
   }
 
-void INTRUS(bool active){
-  
-  if(active){
+// Fonction à activer lorsque le système entre dans le mode "intrusion"
+//  - Affiche un message d'alerte
+//  - Déclenche la sirène d'alarme par sirene()
+//  - Allume la LED en rouge
+void INTRUS(){
    Serial.println("INTRUS !");
    lcd.clear();
    lcd.setCursor(16,0);
    lcd.print("INTRUS");
    lcd.setCursor(16,1);
    lcd.print("DETECTE");
+   etatLed('r');
    sirene();
   }
-  else{  noTone(buzzer); 
-  Serial.println("PLUS D'INTRUS...");}
+
+  // Fonction qui commande la LED RGB  
+  void etatLed(char etat){
+    switch(etat){
+      case 'v': // vert
+        setCouleur(0, 255, 0);
+        break;
+      case 'r': // rouge
+        setCouleur(255,0,0);
+        break;
+      case 'o': // orange
+        setCouleur(255, 108, 0);
+        break;
+      case 'j': // jaune
+        setCouleur(241, 196, 15);
+        break;
+      case 'b': // blanc
+        setCouleur(255, 255, 255);
+        break;
+      case 'e':
+      setCouleur(0, 0, 0);
+      break;
+    }
   }
+
+  void setCouleur(int valeurRouge, int valeurVerte, int valeurBleu) {
+    analogWrite(ledRouge, valeurRouge);
+    analogWrite(ledVerte, valeurVerte);
+    analogWrite(ledBleue, valeurBleu);
+}
+
+
+
+
+
+
+    
