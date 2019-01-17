@@ -1,3 +1,7 @@
+//
+// AMAD SALMON
+//
+
 // DÉFINITION DES INDICATEURS
 int buzzer =13; // BUZZER (SIRÈNE D'ALARME)
 int ledRouge = 7; // LED ROUGE
