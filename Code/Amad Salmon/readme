@@ -1,5 +1,5 @@
 Ici vous trouverez tout le code écrit par Amad Salmon.
 
-Le fichier plusieursFonctions-vMega.ino contient le code principal qui sera executé par Arduino une fois le projet fini. Ceci est la version pour la carte Arduino Mega.
+Le fichier codeMega-vMega.ino contient le code principal qui sera executé par Arduino une fois le projet fini. Ceci est la version pour la carte Arduino Mega.
 
-Tous les autres fichiers sont des programmes d'exemple, que j'ai écrit pour isoler et tester le fonctionnement d'un composant du montage.
+Tous les fichiers dont le nom commence par "exemple-" sont des programmes d'exemple, que j'ai écrit pour isoler et tester le fonctionnement d'un composant du montage.
