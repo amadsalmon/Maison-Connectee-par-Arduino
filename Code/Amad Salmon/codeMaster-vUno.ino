@@ -1,6 +1,10 @@
+//
 // AMAD SALMON
 //
-// CE PROGRAMME EST UN ESSAI VISANT À EXÉCUTER PLUSIEURS COMMANDES EN MÊME TEMPS ET EN BOUCLE.
+// CE PROGRAMME EST LE CODE PRINCIPAL DU PROJET. 
+// C'EST LE PROGRAMME QUI SERA TÉLÉVERSÉ SUR LA CARTE ARDUINO UNE FOIS LE PROJET FINI.
+// IL EXÉCUTE PLUSIEURS COMMANDES EN MÊME TEMPS ET EN BOUCLE.
+//
 // En fonction de l'état du système (déverouillé, en attente d'identification, intrus détecté), différents mécanismes vont s'enclencher.
 //
 
