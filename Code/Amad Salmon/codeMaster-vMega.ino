@@ -1,10 +1,14 @@
+//
 // AMAD SALMON
 //
-// CE PROGRAMME EST UN ESSAI VISANT À EXÉCUTER PLUSIEURS COMMANDES EN MÊME TEMPS ET EN BOUCLE.
+// CE PROGRAMME EST LE CODE PRINCIPAL DU PROJET. 
+// C'EST LE PROGRAMME QUI SERA TÉLÉVERSÉ SUR LA CARTE ARDUINO UNE FOIS LE PROJET FINI.
+// IL EXÉCUTE PLUSIEURS COMMANDES EN MÊME TEMPS ET EN BOUCLE.
 // En fonction de l'état du système (déverouillé, en attente d'identification, intrus détecté), différents mécanismes vont s'enclencher.
 //
 // VERSION POUR ARDUINO MEGA - 17/01/19
 //
+
 #include<Keypad.h> // LIBRAIRIE DE L'INTERFACE KEYPAD
 #include<LiquidCrystal.h> // LIBRAIRIE DU LCD
 #include<Servo.h>// LIBRARIE DU SERVOMOTEUR
